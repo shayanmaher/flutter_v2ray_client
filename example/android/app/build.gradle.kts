@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.example"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -17,6 +17,12 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+            }
     }
 
     defaultConfig {
