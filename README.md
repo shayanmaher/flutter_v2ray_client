@@ -7,10 +7,12 @@
 ![](https://img.shields.io/github/tag/amir-zr/flutter_v2ray_client)
 ![](https://img.shields.io/github/release/amir-zr/flutter_v2ray_client)
 ![](https://img.shields.io/github/issues/amir-zr/flutter_v2ray_client)
+[![pub package](https://img.shields.io/pub/v/flutter_v2ray_client.svg)](https://pub.dev/packages/flutter_v2ray_client)
+[![likes](https://img.shields.io/pub/likes/flutter_v2ray_client)](https://pub.dev/packages/flutter_v2ray_client/score)
+[![pub points](https://img.shields.io/pub/points/flutter_v2ray_client)](https://pub.dev/packages/flutter_v2ray_client/score)
 
 > [!TIP]
-> ### 🚀 Now Available on Windows, macOS, and Linux!
-> ### 📱 iOS Version - Coming November 15
+> ### 🚀 Available on All Platforms - Now Including iOS! (App Store Safe)
 >
 > [<img src="https://img.shields.io/badge/📸_Screenshots-6e5494?style=for-the-badge" height="40">](#-screenshots) [<img src="https://img.shields.io/badge/📱_Platforms-6e5494?style=for-the-badge" height="40">](#-supported-platforms)
 
@@ -66,8 +68,10 @@
 
 ## 📸 Screenshots
 
-| Android |
+| **iOS** |
 |---------|
+| <img src="https://github.com/amir-zr/flutter_v2ray_client/raw/main/screenshots/flutter-v2ray-client-ios.png" alt="iOS" width="600"/> |
+| **Android** |
 | <img src="https://github.com/amir-zr/flutter_v2ray_client/raw/main/screenshots/flutter-v2ray-client-1.png" alt="Android Main Screen" width="300"/>&nbsp;&nbsp;&nbsp;<img src="https://github.com/amir-zr/flutter_v2ray_client/raw/main/screenshots/flutter-v2ray-client-2.png" alt="Android Logs Screen" width="300"/> |
 | **Windows** |
 | <img src="https://github.com/amir-zr/flutter_v2ray_client/raw/main/screenshots/flutter-v2ray-client-windows.png" alt="Windows" width="600"/> |
@@ -76,7 +80,7 @@
 | **Linux** |
 | <img src="https://github.com/amir-zr/flutter_v2ray_client/raw/main/screenshots/flutter-v2ray-client-linux.png" alt="Linux" width="600"/> |
 
-*Example app demonstrating flutter_v2ray_client features across multiple platforms*
+*Example app demonstrating flutter_v2ray_client features across all platforms*
 
 <br>
 
@@ -84,10 +88,10 @@
 | Platform  | Status    | Info | Type |
 | --------- | --------- | ---- | ---- |
 | Android   | Done ✅   | Xray 25.10.15 | Free |
+| iOS       | Done ✅ | Xray 25.10.15 <br/> HevSocks5Tunnel 5.14.1 | [Buy Now](https://t.me/AmirZrDevv) |
 | Windows   | Done ✅ | Xray 25.10.15 <br/> Sing Box 1.12.10 | [Buy Now](https://t.me/AmirZrDevv) |
 | Linux     | Done ✅ | Xray 25.10.15 <br/> Sing Box 1.12.10 | [Buy Now](https://t.me/AmirZrDevv) |
 | macOS     | Done ✅ | Xray 25.10.15 <br/> Sing Box 1.12.10 | [Buy Now](https://t.me/AmirZrDevv) |
-| iOS       | Releasing Nov 15 | [Pre Order](https://t.me/AmirZrDevv) | Premium |
 | Browser Extension | Coming Soon | Chrome, Firefox, Edge | Premium |
 
 <br>
