@@ -17,6 +17,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  provider: ^6.1.2
+  http: ^1.2.2
+  shared_preferences: ^2.3.3
+
   flutter_v2ray_client:
     # When depending on this package from a real application you should use:
     #   flutter_v2ray_client: ^x.y.z
