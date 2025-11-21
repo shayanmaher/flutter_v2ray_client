@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_v2ray_client/flutter_v2ray.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -23,8 +24,10 @@ class NeonRayApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
+          create: (_) => ThemeProvider(prefs),
+        ),
+        ChangeNotifierProvider(
           create: (_) => ConnectionProvider(
-            V2RayService(),
             prefs,
           ),
         ),
@@ -35,20 +38,38 @@ class NeonRayApp extends StatelessWidget {
           ),
         ),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'NeonRay',
-        theme: ThemeData(
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF0F172A),
-          fontFamily: 'Vazir',
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF7C3AED),
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, _) {
+          final baseLight = ThemeData(
+            brightness: Brightness.light,
+            scaffoldBackgroundColor: const Color(0xFFF7F8FD),
+            fontFamily: 'Vazir',
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF7C3AED),
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          );
+          final baseDark = ThemeData(
             brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        home: const NeonRayHome(),
+            scaffoldBackgroundColor: const Color(0xFF0F172A),
+            fontFamily: 'Vazir',
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF7C3AED),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          );
+
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'NeonRay',
+            themeMode: theme.themeMode,
+            theme: baseLight,
+            darkTheme: baseDark,
+            home: const NeonRayHome(),
+          );
+        },
       ),
     );
   }
@@ -59,6 +80,30 @@ class NeonRayHome extends StatefulWidget {
 
   @override
   State<NeonRayHome> createState() => _NeonRayHomeState();
+}
+
+class ThemeProvider extends ChangeNotifier {
+  ThemeProvider(this._prefs) {
+    final saved = _prefs.getString(_prefKey);
+    if (saved != null) {
+      _themeMode = ThemeMode.values.firstWhere(
+        (mode) => mode.name == saved,
+        orElse: () => ThemeMode.dark,
+      );
+    }
+  }
+
+  static const _prefKey = 'theme_mode';
+  final SharedPreferences _prefs;
+  ThemeMode _themeMode = ThemeMode.dark;
+
+  ThemeMode get themeMode => _themeMode;
+
+  void toggleTheme() {
+    _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    _prefs.setString(_prefKey, _themeMode.name);
+    notifyListeners();
+  }
 }
 
 class _NeonRayHomeState extends State<NeonRayHome>
@@ -114,9 +159,12 @@ class _NeonRayHomeState extends State<NeonRayHome>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Subscription URL',
-                          style: TextStyle(fontSize: 14, color: Colors.white70),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         _SubscriptionField(),
@@ -128,9 +176,12 @@ class _NeonRayHomeState extends State<NeonRayHome>
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        const Text(
+                        Text(
                           'Choose your exit node',
-                          style: TextStyle(fontSize: 14, color: Colors.white70),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         const _ServerList(),
@@ -155,35 +206,60 @@ class _NeonRayHomeState extends State<NeonRayHome>
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.read<ThemeProvider>();
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
               'NeonRay',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
+                color: onSurface,
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               'Cyberpunk V2Ray/Xray client',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: onSurface.withOpacity(0.7)),
             ),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: const Icon(Icons.shield_moon_outlined, color: Colors.white70),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.black12,
+                ),
+              ),
+              child: Icon(Icons.shield_moon_outlined, color: onSurface.withOpacity(0.7)),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+              tooltip: 'Toggle theme',
+              style: IconButton.styleFrom(
+                backgroundColor:
+                    isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+              ),
+              onPressed: theme.toggleTheme,
+              icon: Icon(
+                theme.themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                color: onSurface,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -217,24 +293,30 @@ class _SubscriptionFieldState extends State<_SubscriptionField> {
   Widget build(BuildContext context) {
     return Consumer<SubscriptionProvider>(
       builder: (context, provider, _) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final onSurface = colorScheme.onSurface;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             TextField(
               controller: _controller,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: onSurface),
               decoration: InputDecoration(
                 hintText: 'https://example.com/subscription',
-                hintStyle: const TextStyle(color: Colors.white54),
+                hintStyle: TextStyle(color: onSurface.withOpacity(0.6)),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor:
+                    isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Colors.white10),
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: Colors.cyanAccent.withOpacity(0.3)),
+                  borderSide: BorderSide(color: colorScheme.secondary.withOpacity(0.4)),
                 ),
               ),
               onChanged: provider.setSubscriptionUrl,
@@ -244,8 +326,8 @@ class _SubscriptionFieldState extends State<_SubscriptionField> {
               height: 42,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7C3AED),
-                  foregroundColor: Colors.white,
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -270,6 +352,50 @@ class _SubscriptionFieldState extends State<_SubscriptionField> {
                 label: Text(provider.isLoading ? 'Updating…' : 'Sync Subscription'),
               ),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final data = await Clipboard.getData('text/plain');
+                    final raw = data?.text?.trim();
+                    if (raw == null || raw.isEmpty) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Clipboard is empty.')),
+                      );
+                      return;
+                    }
+                    final added = await provider.addServerFromLink(raw);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          added
+                              ? 'Config added from clipboard'
+                              : 'Clipboard content was not a supported config',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.paste_rounded),
+                  label: const Text('Import from clipboard'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => const _ManualServerSheet(),
+                    );
+                  },
+                  icon: const Icon(Icons.add_link),
+                  label: const Text('Add server manually'),
+                ),
+              ],
+            ),
           ],
         );
       },
@@ -285,12 +411,13 @@ class _ServerList extends StatelessWidget {
     return Consumer2<SubscriptionProvider, ConnectionProvider>(
       builder: (context, subscription, connection, _) {
         if (subscription.servers.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+          final color = Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
               'No servers yet. Paste a subscription URL to populate the list.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white60),
+              style: TextStyle(color: color),
             ),
           );
         }
@@ -327,15 +454,21 @@ class _ServerList extends StatelessWidget {
                       children: [
                         Text(
                           server.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${server.type.toUpperCase()} • ${server.address}:${server.port ?? ''}',
-                          style: const TextStyle(color: Colors.white60),
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
+                          ),
                         ),
                       ],
                     ),
@@ -441,6 +574,23 @@ class _ConnectButton extends StatelessWidget {
   }
 }
 
+String _formatSpeed(int bytesPerSecond) {
+  if (bytesPerSecond <= 0) return '--';
+  final mbps = bytesPerSecond * 8 / 1000000;
+  return '${mbps.toStringAsFixed(1)} Mbps';
+}
+
+String _formatData(int bytes) {
+  if (bytes <= 0) return '--';
+  const kb = 1024;
+  const mb = kb * 1024;
+  const gb = mb * 1024;
+  if (bytes >= gb) return '${(bytes / gb).toStringAsFixed(2)} GB';
+  if (bytes >= mb) return '${(bytes / mb).toStringAsFixed(1)} MB';
+  if (bytes >= kb) return '${(bytes / kb).toStringAsFixed(1)} KB';
+  return '$bytes B';
+}
+
 class _StatusPanel extends StatelessWidget {
   const _StatusPanel();
 
@@ -448,11 +598,15 @@ class _StatusPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ConnectionProvider>(
       builder: (context, connection, _) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final onSurface = colorScheme.onSurface;
+        final statusInfo = connection.liveStatus;
+
         Color accent;
         String label;
         switch (connection.status) {
           case ConnectionStatus.connected:
-            accent = Colors.cyanAccent;
+            accent = colorScheme.secondary;
             label = 'Connected';
             break;
           case ConnectionStatus.connecting:
@@ -461,7 +615,7 @@ class _StatusPanel extends StatelessWidget {
             break;
           case ConnectionStatus.disconnected:
           default:
-            accent = Colors.white54;
+            accent = onSurface.withOpacity(0.5);
             label = 'Disconnected';
         }
         return _GlassCard(
@@ -485,21 +639,48 @@ class _StatusPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(label, style: const TextStyle(fontSize: 14)),
+                  Text(label, style: TextStyle(fontSize: 14, color: onSurface)),
                   const Spacer(),
                   Text(
                     connection.selectedServer?.type.toUpperCase() ?? '--',
-                    style: const TextStyle(color: Colors.white60),
+                    style: TextStyle(color: onSurface.withOpacity(0.6)),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _Metric(label: 'Uplink', value: '12.4 mbps'),
-                  _Metric(label: 'Downlink', value: '56.7 mbps'),
-                  _Metric(label: 'Latency', value: '48 ms'),
+                children: [
+                  _Metric(
+                    label: 'Uplink',
+                    value: _formatSpeed(statusInfo.uploadSpeed),
+                  ),
+                  _Metric(
+                    label: 'Downlink',
+                    value: _formatSpeed(statusInfo.downloadSpeed),
+                  ),
+                  _Metric(
+                    label: 'Duration',
+                    value: statusInfo.duration,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _Metric(
+                    label: 'Uploaded',
+                    value: _formatData(statusInfo.upload),
+                  ),
+                  _Metric(
+                    label: 'Downloaded',
+                    value: _formatData(statusInfo.download),
+                  ),
+                  _Metric(
+                    label: 'Server',
+                    value: connection.selectedServer?.name ?? '--',
+                  ),
                 ],
               ),
             ],
@@ -518,14 +699,19 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(label, style: TextStyle(color: onSurface.withOpacity(0.6), fontSize: 12)),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: onSurface,
+          ),
         ),
       ],
     );
@@ -544,16 +730,19 @@ class _BottomSheetStatus extends StatelessWidget {
         child: _GlassCard(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
-            children: const [
-              Icon(Icons.shield, color: Colors.white70),
-              SizedBox(width: 12),
+            children: [
+              Icon(Icons.shield, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Secure NeonGlass VPN tunnel ready. Tap connect to breathe in the glow.',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
               ),
-              Icon(Icons.keyboard_double_arrow_up_rounded, color: Colors.cyanAccent),
+              Icon(Icons.keyboard_double_arrow_up_rounded,
+                  color: Theme.of(context).colorScheme.secondary),
             ],
           ),
         ),
@@ -570,6 +759,11 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? Colors.white10 : Colors.black12;
+    final backgroundColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.white.withOpacity(0.7);
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
@@ -578,9 +772,9 @@ class _GlassCard extends StatelessWidget {
           width: double.infinity,
           padding: padding ?? const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: borderColor),
           ),
           child: child,
         ),
@@ -629,13 +823,26 @@ class _AmbientBackgroundState extends State<_AmbientBackground>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: const Color(0xFF0F172A),
+      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF2F5FF),
       child: Stack(
         children: [
-          _blob(_purple, Colors.purpleAccent.withOpacity(0.35), 280, const Offset(-0.2, -0.3)),
-          _blob(_cyan, Colors.cyanAccent.withOpacity(0.35), 260, const Offset(0.6, -0.1)),
-          _blob(_pink, Colors.pinkAccent.withOpacity(0.35), 300, const Offset(0.1, 0.4)),
+          _blob(
+              _purple,
+              isDark ? Colors.purpleAccent.withOpacity(0.35) : const Color(0xFFB794F4).withOpacity(0.45),
+              280,
+              const Offset(-0.2, -0.3)),
+          _blob(
+              _cyan,
+              isDark ? Colors.cyanAccent.withOpacity(0.35) : const Color(0xFF5EEAD4).withOpacity(0.45),
+              260,
+              const Offset(0.6, -0.1)),
+          _blob(
+              _pink,
+              isDark ? Colors.pinkAccent.withOpacity(0.35) : const Color(0xFFF9A8D4).withOpacity(0.45),
+              300,
+              const Offset(0.1, 0.4)),
         ],
       ),
     );
@@ -668,6 +875,157 @@ class _AmbientBackgroundState extends State<_AmbientBackground>
         );
       },
     );
+  }
+}
+
+class _ManualServerSheet extends StatefulWidget {
+  const _ManualServerSheet();
+
+  @override
+  State<_ManualServerSheet> createState() => _ManualServerSheetState();
+}
+
+class _ManualServerSheetState extends State<_ManualServerSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _portController = TextEditingController();
+  final _secretController = TextEditingController();
+  final _encryptionController = TextEditingController(text: 'aes-256-gcm');
+  String _type = 'vless';
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _addressController.dispose();
+    _portController.dispose();
+    _secretController.dispose();
+    _encryptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.of(context).viewInsets;
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Add server manually',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: onSurface),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _type,
+                items: const [
+                  DropdownMenuItem(value: 'vless', child: Text('VLESS')),
+                  DropdownMenuItem(value: 'trojan', child: Text('Trojan')),
+                  DropdownMenuItem(value: 'shadowsocks', child: Text('Shadowsocks')),
+                ],
+                decoration: const InputDecoration(labelText: 'Type'),
+                onChanged: (value) {
+                  if (value != null) setState(() => _type = value);
+                },
+              ),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name (optional)'),
+              ),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(labelText: 'Address'),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Address is required' : null,
+              ),
+              TextFormField(
+                controller: _portController,
+                decoration: const InputDecoration(labelText: 'Port'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  final port = int.tryParse(value ?? '');
+                  if (port == null || port <= 0) {
+                    return 'Enter a valid port';
+                  }
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _secretController,
+                decoration: InputDecoration(
+                  labelText: _type == 'shadowsocks'
+                      ? 'Password'
+                      : 'ID / Password',
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'A credential is required' : null,
+              ),
+              if (_type == 'shadowsocks')
+                TextFormField(
+                  controller: _encryptionController,
+                  decoration: const InputDecoration(labelText: 'Encryption method'),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Encryption is required' : null,
+                ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save_alt),
+                  label: const Text('Save server'),
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) return;
+                    final raw = _buildLink();
+                    final added = await context.read<SubscriptionProvider>().addServerFromLink(raw);
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          added ? 'Server saved' : 'Could not parse the provided details',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _buildLink() {
+    final name = _nameController.text.trim().isEmpty
+        ? '${_type.toUpperCase()} Node'
+        : _nameController.text.trim();
+    final encodedName = Uri.encodeComponent(name);
+    final host = _addressController.text.trim();
+    final port = _portController.text.trim();
+    final secret = _secretController.text.trim();
+
+    switch (_type) {
+      case 'vless':
+        return 'vless://$secret@$host:$port#${encodedName}';
+      case 'trojan':
+        return 'trojan://$secret@$host:$port#${encodedName}';
+      case 'shadowsocks':
+        final method = _encryptionController.text.trim();
+        final encoded = base64.encode(utf8.encode('$method:$secret'));
+        return 'ss://$encoded@$host:$port#${encodedName}';
+      default:
+        return '';
+    }
   }
 }
 
@@ -716,13 +1074,16 @@ class ServerNode {
 enum ConnectionStatus { disconnected, connecting, connected }
 
 class ConnectionProvider extends ChangeNotifier {
-  ConnectionProvider(this._service, this._prefs);
+  ConnectionProvider(this._prefs) {
+    _service = V2RayService(onStatusChanged: _handleStatusUpdate);
+  }
 
-  final V2RayService _service;
+  late final V2RayService _service;
   final SharedPreferences _prefs;
 
   ConnectionStatus status = ConnectionStatus.disconnected;
   ServerNode? selectedServer;
+  V2RayStatus liveStatus = V2RayStatus();
 
   Future<void> selectServer(ServerNode server) async {
     selectedServer = server;
@@ -739,6 +1100,19 @@ class ConnectionProvider extends ChangeNotifier {
     }
   }
 
+  void _handleStatusUpdate(V2RayStatus statusUpdate) {
+    liveStatus = statusUpdate;
+    if (statusUpdate.state.toUpperCase() == 'CONNECTED' &&
+        status != ConnectionStatus.connected) {
+      status = ConnectionStatus.connected;
+    }
+    if (statusUpdate.state.toUpperCase() == 'DISCONNECTED' &&
+        status != ConnectionStatus.disconnected) {
+      status = ConnectionStatus.disconnected;
+    }
+    notifyListeners();
+  }
+
   Future<void> connect() async {
     final server = selectedServer;
     if (server == null) return;
@@ -749,12 +1123,14 @@ class ConnectionProvider extends ChangeNotifier {
       status = ConnectionStatus.connected;
     } catch (_) {
       status = ConnectionStatus.disconnected;
+      liveStatus = V2RayStatus(state: 'DISCONNECTED');
     }
     notifyListeners();
   }
 
   Future<void> disconnect() async {
     status = ConnectionStatus.disconnected;
+    liveStatus = V2RayStatus(state: 'DISCONNECTED');
     notifyListeners();
     await _service.stop();
   }
@@ -814,10 +1190,10 @@ class SubscriptionParser {
         .where((line) => line.isNotEmpty)
         .toList();
 
-    return lines.map(_parseLine).whereType<ServerNode>().toList();
+    return lines.map(parseLink).whereType<ServerNode>().toList();
   }
 
-  ServerNode? _parseLine(String line) {
+  ServerNode? parseLink(String line) {
     if (line.startsWith('vmess://')) {
       final payload = line.replaceFirst('vmess://', '');
       final jsonString = utf8.decode(base64.decode(payload));
@@ -844,6 +1220,22 @@ class SubscriptionParser {
         raw: line,
       );
     }
+    if (line.startsWith('ss://')) {
+      final uri = Uri.parse(line);
+      final name = uri.fragment.isNotEmpty
+          ? Uri.decodeComponent(uri.fragment)
+          : 'Shadowsocks Node';
+      final host = uri.host;
+      final port = uri.port == 0 ? null : uri.port;
+      if (host.isEmpty || port == null) return null;
+      return ServerNode(
+        name: name,
+        address: host,
+        port: port,
+        type: 'shadowsocks',
+        raw: line,
+      );
+    }
     return null;
   }
 }
@@ -857,6 +1249,15 @@ class SubscriptionProvider extends ChangeNotifier {
   String subscriptionUrl = '';
   bool isLoading = false;
   List<ServerNode> servers = [];
+
+  Future<bool> addServerFromLink(String raw) async {
+    final parsed = _parser.parseLink(raw.trim());
+    if (parsed == null) return false;
+    servers = _mergeServers([parsed]);
+    await _persistServers();
+    notifyListeners();
+    return true;
+  }
 
   void setSubscriptionUrl(String value) {
     subscriptionUrl = value.trim();
@@ -882,16 +1283,34 @@ class SubscriptionProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     try {
-      servers = await _parser.parse(subscriptionUrl);
-      await _prefs.setString(
-        'servers_cache',
-        jsonEncode(servers.map((s) => s.toJson()).toList()),
-      );
+      final fetched = await _parser.parse(subscriptionUrl);
+      servers = _mergeServers(fetched);
+      await _persistServers();
     } catch (_) {
-      servers = [];
+      // Keep existing servers on failure.
     } finally {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  List<ServerNode> _mergeServers(List<ServerNode> incoming) {
+    final merged = [...servers];
+    for (final server in incoming) {
+      final exists = merged.any((s) =>
+          (server.raw != null && server.raw == s.raw) ||
+          (s.address == server.address && s.type == server.type && s.port == server.port));
+      if (!exists) {
+        merged.add(server);
+      }
+    }
+    return merged;
+  }
+
+  Future<void> _persistServers() async {
+    await _prefs.setString(
+      'servers_cache',
+      jsonEncode(servers.map((s) => s.toJson()).toList()),
+    );
   }
 }
