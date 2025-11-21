@@ -744,8 +744,12 @@ class ConnectionProvider extends ChangeNotifier {
     if (server == null) return;
     status = ConnectionStatus.connecting;
     notifyListeners();
-    await _service.start(server);
-    status = ConnectionStatus.connected;
+    try {
+      await _service.start(server);
+      status = ConnectionStatus.connected;
+    } catch (_) {
+      status = ConnectionStatus.disconnected;
+    }
     notifyListeners();
   }
 
@@ -757,14 +761,44 @@ class ConnectionProvider extends ChangeNotifier {
 }
 
 class V2RayService {
+  V2RayService({void Function(V2RayStatus status)? onStatusChanged})
+      : _v2ray = V2ray(onStatusChanged: onStatusChanged ?? (_) {}) {
+    _initialization = _v2ray.initialize(
+      notificationIconResourceType: "mipmap",
+      notificationIconResourceName: "ic_launcher",
+    );
+  }
+
+  final V2ray _v2ray;
+  late final Future<void> _initialization;
+
   Future<void> start(ServerNode server) async {
-    await Future.delayed(const Duration(seconds: 2));
-    // Placeholder for flutter_v2ray start logic.
+    final raw = server.raw;
+    if (raw == null || raw.isEmpty) {
+      throw Exception('Missing server configuration');
+    }
+
+    await _initialization;
+    final parsed = V2ray.parseFromURL(raw);
+    final remark = parsed.remark.isNotEmpty ? parsed.remark : server.name;
+
+    final hasPermission = await _v2ray.requestPermission();
+    if (!hasPermission) {
+      throw Exception('VPN permission denied');
+    }
+
+    await _v2ray.startV2Ray(
+      remark: remark,
+      config: parsed.getFullConfiguration(),
+      proxyOnly: false,
+      bypassSubnets: null,
+      notificationDisconnectButtonName: "DISCONNECT",
+    );
   }
 
   Future<void> stop() async {
-    await Future.delayed(const Duration(seconds: 1));
-    // Placeholder for flutter_v2ray stop logic.
+    await _initialization;
+    await _v2ray.stopV2Ray();
   }
 }
 
