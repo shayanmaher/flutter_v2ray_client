@@ -60,52 +60,44 @@ class _NeonRayHomeState extends State<NeonRayHome>
         children: [
           const _AmbientBackground(),
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _Header(),
-                  const SizedBox(height: 24),
-                  _GlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Subscription URL',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 1000;
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Header(),
+                      const SizedBox(height: 24),
+                      Flex(
+                        direction: isWide ? Axis.horizontal : Axis.vertical,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: isWide ? 320 : double.infinity,
+                            child: const _ServerPanel(),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SubscriptionField(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _GlassCard(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Choose your exit node',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          SizedBox(height: isWide ? 0 : 18, width: isWide ? 18 : 0),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _ConnectionSurface(glowController: _glowController),
+                                const SizedBox(height: 18),
+                                const _TrafficFooter(),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        const _ServerList(),
-                      ],
-                    ),
+                          if (isWide) ...[
+                            const SizedBox(width: 18),
+                            const _ActionRail(),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  _ConnectButton(glowController: _glowController),
-                  const SizedBox(height: 20),
-                  const _StatusPanel(),
-                ],
-              ),
+                );
+              },
             ),
           ),
           const _BottomSheetStatus(),
@@ -315,6 +307,389 @@ class _SubscriptionFieldState extends State<_SubscriptionField> {
   }
 }
 
+class _ServerPanel extends StatelessWidget {
+  const _ServerPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.cyanAccent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Recommended servers',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const _ServerList(),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => const _ManualServerSheet(),
+                    );
+                  },
+                  icon: const Icon(Icons.add_link),
+                  label: const Text('Add new subscription'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Subscription URL',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const _SubscriptionField(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConnectionSurface extends StatelessWidget {
+  const _ConnectionSurface({required this.glowController});
+
+  final AnimationController glowController;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
+    return _GlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+      child: Consumer<ConnectionProvider>(
+        builder: (context, connection, _) {
+          final selected = connection.selectedServer;
+          final status = connection.status;
+          final statusLabel = switch (status) {
+            ConnectionStatus.connected => 'Connected',
+            ConnectionStatus.connecting => 'Connecting…',
+            ConnectionStatus.disconnected => 'Disconnected',
+          };
+          final accent = switch (status) {
+            ConnectionStatus.connected => Colors.cyanAccent,
+            ConnectionStatus.connecting => Colors.amberAccent,
+            ConnectionStatus.disconnected => Colors.redAccent,
+          };
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.circle, size: 10, color: accent),
+                        const SizedBox(width: 6),
+                        Text(
+                          statusLabel,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Show logs',
+                    onPressed: () {
+                      Navigator.of(context).pushNamed('/logs');
+                    },
+                    icon: const Icon(Icons.article_outlined),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _ConnectButton(glowController: glowController),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.flash_on, color: accent, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    selected?.name ?? 'Select a server to begin',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: onSurface.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Duration',
+                      value: connection.liveStatus.duration,
+                      icon: Icons.schedule,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricTile(
+                      label: 'Status',
+                      value: connection.liveStatus.state,
+                      icon: Icons.security,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TrafficFooter extends StatelessWidget {
+  const _TrafficFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return _GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Consumer<ConnectionProvider>(
+        builder: (context, connection, _) {
+          final status = connection.liveStatus;
+          return Row(
+            children: [
+              Expanded(
+                child: _MetricTile(
+                  label: 'Download',
+                  value: _formatSpeed(status.downloadSpeed),
+                  icon: Icons.south,
+                  accent: Colors.cyanAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricTile(
+                  label: 'Upload',
+                  value: _formatSpeed(status.uploadSpeed),
+                  icon: Icons.north,
+                  accent: Colors.pinkAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Usage', style: TextStyle(color: onSurface.withOpacity(0.6))),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.download_done, size: 16, color: Colors.cyanAccent),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatData(status.download),
+                          style: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.upload_rounded, size: 16, color: Colors.pinkAccent),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatData(status.upload),
+                          style: TextStyle(color: onSurface, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ActionRail extends StatelessWidget {
+  const _ActionRail();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final iconColor = isDark ? Colors.white70 : Colors.black54;
+    return _GlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _RailButton(icon: Icons.home_outlined, label: 'Home', color: iconColor),
+          _RailButton(icon: Icons.workspaces_outline, label: 'Nodes', color: iconColor),
+          _RailButton(icon: Icons.analytics_outlined, label: 'Stats', color: iconColor),
+          _RailButton(icon: Icons.card_membership_outlined, label: 'VPN', color: iconColor),
+          _RailButton(icon: Icons.settings_outlined, label: 'Settings', color: iconColor),
+          const SizedBox(height: 10),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF0EA5E9),
+                  const Color(0xFF6366F1),
+                  const Color(0xFFEC4899),
+                ],
+              ),
+            ),
+            child: Icon(Icons.person, color: onSurface),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RailButton extends StatelessWidget {
+  const _RailButton({required this.icon, required this.label, required this.color});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        children: [
+          IconButton(
+            onPressed: () {},
+            icon: Icon(icon, color: color),
+          ),
+          Text(
+            label,
+            style: TextStyle(color: color, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.accent,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final background = accent?.withOpacity(0.08) ?? Colors.white12;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: (accent ?? Colors.white70).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 18, color: accent ?? onSurface),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: onSurface.withOpacity(0.6))),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ServerList extends StatelessWidget {
   const _ServerList();
 
@@ -346,18 +721,31 @@ class _ServerList extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    height: 36,
-                    width: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.pinkAccent.withOpacity(0.8),
-                          Colors.cyanAccent.withOpacity(0.8),
-                        ],
-                      ),
+                      color: Colors.greenAccent.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.wifi_lock, color: Colors.white70),
+                    child: Column(
+                      children: [
+                        Text(
+                          '55ms',
+                          style: TextStyle(
+                            color: Colors.greenAccent.shade100,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.greenAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -385,6 +773,25 @@ class _ServerList extends StatelessWidget {
                       ],
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white12,
+                      ),
+                    ),
+                    child: Text(
+                      server.type.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   IconButton(
                     onPressed: () {
                       connection.selectServer(server);
