@@ -79,6 +79,15 @@ class _NeonRayHomeState extends State<NeonRayHome>
     subProvider.restoreState();
     final connection = context.read<ConnectionProvider>();
     connection.restoreSelectedServer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return; // Safety check
+
+      final subProvider = context.read<SubscriptionProvider>();
+      subProvider.restoreState();
+
+      final connection = context.read<ConnectionProvider>();
+      connection.restoreSelectedServer();
+    });
   }
 
   @override
