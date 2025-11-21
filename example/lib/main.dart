@@ -761,7 +761,7 @@ class ConnectionProvider extends ChangeNotifier {
 }
 
 class V2RayService {
-  V2RayService({V2RayStatusCallback? onStatusChanged})
+  V2RayService({void Function(V2RayStatus status)? onStatusChanged})
       : _v2ray = V2ray(onStatusChanged: onStatusChanged ?? (_) {}) {
     _initialization = _v2ray.initialize(
       notificationIconResourceType: "mipmap",
